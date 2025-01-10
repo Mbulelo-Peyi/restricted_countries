@@ -8,7 +8,7 @@ setup(
     long_description_content_type='text/markdown',
     author='Mbulelo Phillip Peyi',
     author_email='your.email@example.com',
-    url='https://github.com/yourusername/django-restricted-countries',  # GitHub repository URL
+    url='https://github.com/Mbulelo-Peyi/restricted_countries',  # GitHub repository URL
     packages=find_packages(),  # Find all packages in the current directory
     keywords=['django', 'restricted access', 'web', 'country', 'logging'],
     classifiers=[
