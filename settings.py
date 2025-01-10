@@ -4,7 +4,7 @@ from django.conf import settings
 
 
 DEFAULT_SETTINGS = {
-    "COUNTRIES" : ['CN', 'RU', 'IR'],
+    "COUNTRIES" : ['ZA'],
     "FORBIDDEN_MSG" : "Access Denied"
 }
 
