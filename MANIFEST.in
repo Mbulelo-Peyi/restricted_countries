@@ -1,0 +1,21 @@
+# Include the README file (documentation)
+include README.md
+
+# Include the LICENSE file (license for the project)
+include LICENSE
+
+# Include the geoip database files if they are in a folder (e.g., geoip/)
+include geoip/*.mmdb
+
+# Include all Python files in the restricted_countries package
+recursive-include restricted_countries *
+
+# Include all test files (e.g., tests for your middleware)
+recursive-include tests *
+
+# Include any additional configuration files if needed (e.g., .ini or .json files)
+include *.ini
+include *.json
+
+# Exclude Python bytecode files (e.g., .pyc files) from the distribution
+exclude *.pyc
