@@ -1,35 +1,59 @@
 from django.http import HttpResponseForbidden
+from django.utils.deprecation import MiddlewareMixin
+from django.core.cache import cache
 from restricted_countries.utils import get_ip_address
 from restricted_countries import settings
-from django.contrib.gis.geoip2 import GeoIP2
+from django.contrib.gis.geoip2 import GeoIP2, GeoIP2Exception
 import logging
+import ipaddress
 
-logger = logging.getLogger('restricted_countries')
+logger = logging.getLogger("restricted_countries")
 
-class RestrictedCountriesMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
+class RestrictedCountriesMiddleware(MiddlewareMixin):
+    def process_request(self, request):
         # Get the client's IP address
         ip = get_ip_address(request)
 
-        if ip:
+        if not ip:
+            return None  # Allow access if IP can't be determined
+
+        # Exclude private/local IPs from GeoIP lookup
+        if self.is_private_ip(ip):
+            return None
+
+        # Check if the IP’s country is already cached
+        cache_key = f"geoip_country_{ip}"
+        iso_code = cache.get(cache_key)
+
+        if iso_code is None:
             try:
                 # Determine the country of the IP
                 geo = GeoIP2()
                 country = geo.country(ip)  # Returns a dict {'country_code': 'XX', 'country_name': 'Country'}
-                iso_code = country.get('country_code')
+                iso_code = country.get("country_code")
 
-                # Get settings only once
-                config = settings.get_config()
-                restricted_countries = config.get("COUNTRIES", [])
-                msg = config.get("FORBIDDEN_MSG", "Access forbidden.")
+                # Cache the result to avoid repeated lookups (e.g., 24 hours)
+                cache.set(cache_key, iso_code, timeout=86400)
 
-                if iso_code in restricted_countries:
-                    return HttpResponseForbidden(msg)
-            except Exception as e:
-                # Log the error with details
+            except (GeoIP2Exception, ValueError) as e:
                 logger.error(f"GeoIP lookup failed for IP {ip}: {e}")
+                return None  # Allow access if GeoIP lookup fails
 
-        return self.get_response(request)
+        # Get restricted countries from settings
+        config = settings.get_config()
+        restricted_countries = config.get("COUNTRIES", [])
+        forbidden_msg = config.get("FORBIDDEN_MSG", "Access forbidden.")
+
+        # If the user's country is restricted, block access
+        if iso_code in restricted_countries:
+            return HttpResponseForbidden(forbidden_msg)
+
+        return None  # Allow access
+
+    @staticmethod
+    def is_private_ip(ip):
+        """Check if an IP is private/local (e.g., 127.0.0.1, 192.168.x.x)"""
+        try:
+            return ipaddress.ip_address(ip).is_private
+        except ValueError:
+            return False  # Handle invalid IP formats gracefully
