@@ -1,5 +1,5 @@
 from django.http import HttpResponseForbidden
-from restricted_countries.utils import get_client_ip
+from restricted_countries.utils import get_ip_address
 from restricted_countries import settings
 from django.contrib.gis.geoip2 import GeoIP2
 import logging
@@ -13,7 +13,7 @@ class RestricedCountriesMiddleware:
 
     def __call__(self, request):
         # Get the client's IP address
-        ip = get_client_ip(request)
+        ip = get_ip_address(request)
         
         if ip:
             try:
