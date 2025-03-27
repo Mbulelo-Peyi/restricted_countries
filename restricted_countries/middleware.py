@@ -11,9 +11,13 @@ logger = logging.getLogger("restricted_countries")
 
 class RestrictedCountriesMiddleware(MiddlewareMixin):
     def process_request(self, request):
+        # Allow access for superusers and staff members
+        if hasattr(request, "user") and request.user.is_authenticated:
+            if request.user.is_staff or request.user.is_superuser:
+                return None  # Skip restriction for staff/admin users
+
         # Get the client's IP address
         ip = get_ip_address(request)
-
         if not ip:
             return None  # Allow access if IP can't be determined
 
@@ -29,7 +33,7 @@ class RestrictedCountriesMiddleware(MiddlewareMixin):
             try:
                 # Determine the country of the IP
                 geo = GeoIP2()
-                country = geo.country(ip)  # Returns a dict {'country_code': 'XX', 'country_name': 'Country'}
+                country = geo.country(ip)  # Returns {'country_code': 'XX', 'country_name': 'Country'}
                 iso_code = country.get("country_code")
 
                 # Cache the result to avoid repeated lookups (e.g., 24 hours)
